@@ -761,7 +761,7 @@ bool BinaryEdit::createMemoryBackingStore(mapped_object *obj) {
       }
       else {
          newTracker = new memoryTracker(regs[i]->getMemOffset(),
-                                        regs[i]->getMemSize(),
+                                        regs[i]->getDiskSize(),
                                         regs[i]->getPtrToRawData());
          
       }
