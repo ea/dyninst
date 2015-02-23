@@ -2429,7 +2429,7 @@ void Object::applyRelocs(Region* relocs, Offset delta)
 }
 void Object::rebase(Offset off)
 {
-	if(off == imageBase) return;
+	if(off <= imageBase) return;
 	Region* relocs = findRegionByName(".reloc");
 	if(!relocs) {
 		fprintf(stderr, "rebase found no .reloc section, bailing\n");
