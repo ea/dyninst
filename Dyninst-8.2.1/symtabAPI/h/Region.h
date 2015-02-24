@@ -111,7 +111,7 @@ class SYMTAB_EXPORT Region : public AnnotatableSparse {
    void setMemSize(unsigned long);
    void setDiskSize(unsigned long);
    void setFileOffset(Offset);
-
+   void setDiskOffset(Offset);
    void *getPtrToRawData() const;
    bool setPtrToRawData(void *, unsigned long);//also sets diskSize
 

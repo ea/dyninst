@@ -280,6 +280,11 @@ void Region::setFileOffset(Offset newoff)
     fileOff_ = newoff;
 }
 
+void Region::setDiskOffset(Offset newoff)
+{
+    diskOff_ = newoff;
+}
+
 void Region::setMemSize(unsigned long newsize)
 {
     memSize_ = newsize;

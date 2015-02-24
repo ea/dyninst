@@ -399,6 +399,10 @@ bool emitWin::driver(Symtab *obj, std::string fName){
             memcpy(p->Name, newregs[i]->getRegionName().c_str(),
             (size_t)strlen(newregs[i]->getRegionName().c_str()));
         secHdrs.push_back(p);
+        if(!strcmp(newregs[i]->getRegionName().c_str(),".dyninstInst")){
+            getDyninstSection(obj)->setDiskOffset(p-PointerToRawData);
+            getDyninstSection(obj)->setMemOffset(p->VirtualAddress);
+        }
         pre = p;
     }
     
