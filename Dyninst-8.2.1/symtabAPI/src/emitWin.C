@@ -315,10 +315,6 @@ bool emitWin::writeImpTable(Symtab* obj)
 
 
 bool emitWin::driver(Symtab *obj, std::string fName){
-	//if external references exist, write the import info.
-	if(!obj_nt->getRefs().empty())
-		writeImpTable(obj);
-
 	Offset MoveAheadOffset=0;
     //get the number of new added sections
     std::vector<Region *> newregs;
@@ -405,7 +401,12 @@ bool emitWin::driver(Symtab *obj, std::string fName){
         }
         pre = p;
     }
-    
+    // now that the dyninst section is properly built, we can write the import table
+   	//if external references exist, write the import info.
+	if(!obj_nt->getRefs().empty())
+		writeImpTable(obj);
+
+
     //printf("size of sec headers:%d\n", secHdrs.size());
     for(unsigned int i=0; i<secHdrs.size(); i++){
         printf("%s, diskOff=%x, diskSize=%x, memoff=%x, memsize=%x\n", 
