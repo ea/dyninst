@@ -368,8 +368,8 @@ BinaryEdit *BinaryEdit::openFile(const std::string &file,
          return NULL;
     }
     Address base = linkedFile->getFreeOffset(50*1024*1024);
-    base += (1024*1024);
-    base -= (base & (1024*1024-1));
+    //base += (1024*1024);
+    //base -= (base & (1024*1024-1));
 
     newBinaryEdit->highWaterMark_ = base;
     newBinaryEdit->lowWaterMark_ = newBinaryEdit->highWaterMark_;
