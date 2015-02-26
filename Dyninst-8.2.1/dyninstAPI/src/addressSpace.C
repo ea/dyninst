@@ -1194,8 +1194,8 @@ void trampTrapMappings::arrange_mapping(tramp_mapping_t &m, bool should_sort,
 }
 
 void trampTrapMappings::flush() {
-   if (!needs_updating || blockFlushes)
-      return;
+   //if (!needs_updating || blockFlushes)
+   //   return;
 
    set<mapped_object *> &rtlib = proc()->runtime_lib;
 
