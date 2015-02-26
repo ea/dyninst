@@ -69,7 +69,7 @@ PIMAGE_SECTION_HEADER emitWin::CreateSecHeader(unsigned int size, PIMAGE_SECTION
 
     newSecHdr->SizeOfRawData=disk_size;
     newSecHdr->Misc.VirtualSize=mem_size;
-    newSecHdr->Characteristics=0xC0000040;
+    newSecHdr->Characteristics=0xE0000040; // we need it to be executable too
     return newSecHdr;
 }
 
