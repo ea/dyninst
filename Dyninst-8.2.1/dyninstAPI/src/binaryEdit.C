@@ -680,7 +680,12 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
       // First, text
       assert(symObj);
       
-      
+	//////////////
+     	  for(CodeTrackers::iterator it = relocatedCode_.begin(); it != relocatedCode_.end(); ++it){
+		  (*it)->debug();
+	  } 
+	//////////////
+
       // And now we generate the new binary
       //if (!symObj->emit(newFileName.c_str())) {
       if (!symObj->emit(newFileName.c_str())) {
