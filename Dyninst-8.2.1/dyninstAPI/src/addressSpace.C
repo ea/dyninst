@@ -1903,6 +1903,38 @@ bool AddressSpace::transform(CodeMover::Ptr cm) {
 
 }
 
+
+bool AddressSpace::newRelocAddress(Address address,std::list<Address> &relocs){
+  //findBlocksByAddr
+  std::list<Address> relocs;
+  std::set<block_instance *> blocks;
+
+   std::set<func_instance*> funcs;
+   if(findBlocksByAddr(address,blocks)){
+   // address is in atleast one relocated block
+
+  for(std::set<block_instance *>::iterator it = blocks.begin(); it != blocks.end(); ++it){
+    //calculate delta
+    findFuncsByAddr((*it)->start(),funcs);
+    for(std::set<func_instance *>::iterator fit = funcs.begin(); fit != funcs.end();++fit){
+      std::list<Address> blockRelocs;
+      getRelocAddrs((*it)->start(),*it, *fit,blockRelocs,true);
+      for(std::list<Address>::iterator brit = blockRelocs.begin(); brit != blockRelocs.end(); ++brit){
+        Offset delta = *brit - (*it)->start();
+        relocs.push_back(address+delta);
+      }
+    }
+  }
+   }
+
+  for(std::list<Address>::iterator rit = relocs.begin(); rit != relocs.end(); ++rit){
+    cout << hex << *rit <<  endl;
+  }
+  if(relocs.empty()) return false;
+  return true;
+}
+
+
 Address AddressSpace::generateCode(CodeMover::Ptr cm, Address nearTo) {
   // And now we start the relocation process.
   // This is at heart an iterative process, using the following

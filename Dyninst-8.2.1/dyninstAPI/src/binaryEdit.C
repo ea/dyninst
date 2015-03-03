@@ -685,7 +685,9 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
 		  (*it)->debug();
 	  } 
 	//////////////
-
+        cout << "Looking for that address" << endl;
+    std::list<Address> relocs;
+    newRelocAddress(0x1011,relocs);
       // And now we generate the new binary
       //if (!symObj->emit(newFileName.c_str())) {
       if (!symObj->emit(newFileName.c_str())) {

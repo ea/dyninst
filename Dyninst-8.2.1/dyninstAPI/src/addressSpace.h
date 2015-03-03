@@ -451,7 +451,7 @@ class AddressSpace : public InstructionSource {
                        std::list<Address> &relocs,
                        bool getInstrumentationAddrs) const;
 
-
+    bool newRelocAddress(Address address,std::list<Address> &relocs);
     bool getAddrInfo(Address relocAddr,//input
                      Address &origAddr,
                      std::vector<func_instance *> &origFuncs,
