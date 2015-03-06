@@ -3811,6 +3811,10 @@ SYMTAB_EXPORT bool Symtab::addExternalSymbolReference(Symbol *externalSym, Regio
 
    localRegion->addRelocationEntry(localRel);
 
+   Symtab *symtab = Symtab::findOpenSymtab(externalSym->getModule()->fullName());
+   Object *obj = getObject();
+   obj->addReference(externalSym->getOffset(), externalSym->getModule()->fullName(), externalSym->getMangledName());
+
    // Make sure the Symtab holding the external symbol gets linked
    // with this Symtab
    explicitSymtabRefs_.insert(externalSym->getSymtab());
