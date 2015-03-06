@@ -38,7 +38,8 @@
 #include "os.h"
 #include "instPoint.h"
 #include "function.h"
-
+#include "RelocRepair.h"
+ 
 using namespace Dyninst::SymtabAPI;
 
 // #define USE_ADDRESS_MAPS
@@ -680,57 +681,46 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
       // First, text
       assert(symObj);
       
-	//////////////
-     	  for(CodeTrackers::iterator it = relocatedCode_.begin(); it != relocatedCode_.end(); ++it){
-		  (*it)->debug();
-	  } 
-	//////////////
-    std::list<Address> relocs;
-    Region *reloc = NULL;
-    symObj->findRegion(reloc,".reloc");
+      std::list<Address> relocs;
+      Region *reloc = NULL;
+
+      ////////////////////
+      // TODO: Revisit this and use correct way of getting relocs 
+      symObj->findRegion(reloc,".reloc");
 
 
-    unsigned char* section_pointer = (unsigned char*)reloc->getPtrToRawData();
-  unsigned char* section_end = section_pointer+reloc->getMemSize();
-  while(section_pointer < section_end)
-  {
-    PIMAGE_BASE_RELOCATION curRelocPage = (PIMAGE_BASE_RELOCATION)(section_pointer);
-    section_pointer += sizeof(IMAGE_BASE_RELOCATION);
-    Offset pageBase = curRelocPage->VirtualAddress;
-    if(pageBase == 0) break;
-    int numRelocs = (curRelocPage->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
-    for(int i = 0; i < numRelocs; ++i)
-    {
-      WORD curReloc = *(WORD*)(section_pointer);
-      section_pointer += sizeof(WORD);
-      Offset addr = (curReloc & 0x0FFF) + pageBase;
-      WORD type = curReloc >> 12;
-      switch(type)
-      {
-      case IMAGE_REL_BASED_ABSOLUTE:
-        // These are placeholders only
-        break;
-      case IMAGE_REL_BASED_HIGHLOW:
-        {
-          // These should be the only things we deal with on Win32; revisit when we hit 64-bit windows
-          //
-          relocs.clear();
-          if(newRelocAddress(addr,relocs)){
-            for(std::list<Address>::iterator it = relocs.begin(); it != relocs.end();++it){
-              //DWORD* loc_to_fix = get_dword_ptr((*it)); 
-              cout << "original reloc: " << hex << addr << " new reloc: " << (*it) << endl;
-
+      unsigned char* section_pointer = (unsigned char*)reloc->getPtrToRawData();
+      unsigned char* section_end = section_pointer+reloc->getMemSize();
+      while(section_pointer < section_end)      {
+        PIMAGE_BASE_RELOCATION curRelocPage = (PIMAGE_BASE_RELOCATION)(section_pointer);
+        section_pointer += sizeof(IMAGE_BASE_RELOCATION);
+        Offset pageBase = curRelocPage->VirtualAddress;
+        if(pageBase == 0) break;
+        int numRelocs = (curRelocPage->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+        for(int i = 0; i < numRelocs; ++i)        {
+          WORD curReloc = *(WORD*)(section_pointer);
+          section_pointer += sizeof(WORD);
+          Offset addr = (curReloc & 0x0FFF) + pageBase;
+          WORD type = curReloc >> 12;
+          switch(type)          {
+            case IMAGE_REL_BASED_ABSOLUTE:
+            break;
+            case IMAGE_REL_BASED_HIGHLOW:            {
+              relocs.clear();
+              if(newRelocAddress(addr,relocs)){
+                for(std::list<Address>::iterator it = relocs.begin(); it != relocs.end();++it){
+                  cout << "original reloc: " << hex << addr << " new reloc: " << (*it) << endl;
+                }
+              }
             }
+            break;
+            default:
+            break;
           }
-
         }
-        break;
-      default:
-        fprintf(stderr, "Unknown relocation type 0x%x for addr %p\n", type, addr);
-        break;
       }
-    }
-  }
+      ///////////////////////////////////////////
+
       // And now we generate the new binary
       //if (!symObj->emit(newFileName.c_str())) {
       if (!symObj->emit(newFileName.c_str())) {
@@ -738,6 +728,23 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
          showErrorCallback(109, Symtab::printError(lastError));
          return false;
       }
+
+      //now fix relocs
+      RelocRepair RR;
+
+      RR.OpenFileAndMap((char *)newFileName.c_str());
+      RR.ReadOriginalRelocs();
+
+
+      // ----------------------------
+      // add reloc entry manually
+      // ---------------------------
+      for(std::list<Address>::iterator it = relocs.begin(); it != relocs.end();++it){
+        RR.RelocsList.push_back((*it));
+      }
+      RR.GenerateNewRelocs(&RR.RelocsList);
+      RR.WriteRelocs();      
+
    return true;
 }
 
