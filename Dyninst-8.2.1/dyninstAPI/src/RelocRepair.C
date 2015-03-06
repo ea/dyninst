@@ -1,18 +1,17 @@
+#include <vector>
+#include <algorithm>
+#include <functional>
+
+#include <Windows.h>
+#include <imagehlp.h>
+#include <assert.h>
+
+#include <map>
+
 #include "RelocRepair.h"
 
-
-
-RelocRepair::RelocRepair()
-{
-
-
-}
-
-RelocRepair::~RelocRepair()
-{
-
-
-}
+RelocRepair::RelocRepair(){}
+RelocRepair::~RelocRepair(){}
 
 
 
@@ -39,6 +38,68 @@ int RelocRepair::CloseFileMap(void)
 {
 	if (this->LI.MappedAddress)
 		UnMapAndLoad(&this->LI);
+	return STATUS_OK;
+}
+
+
+//crawl through new code memry looking for absolute references to dummy addresses 
+void findAbsoluteAddr(void *haystack, unsigned long haystack_len, unsigned long address,std::vector<void *> &points){
+	char *ptr = (char *)haystack;
+	unsigned int len = haystack_len;
+	for(int i = 0; i < haystack_len-3; i++){
+		if(memcmp(ptr+i,&address,sizeof(unsigned long)) == 0){
+			points.push_back(ptr+i);
+		}
+	}
+}
+
+
+
+//make a list of entries in final iat
+void RelocRepair::parseIAT(std::map<string,void*,comparer> &iatEntries){
+	PIMAGE_SECTION_HEADER		pSHc = &this->pSH[this->pPE->FileHeader.NumberOfSections-1];
+
+	PIMAGE_IMPORT_DESCRIPTOR idt = (PIMAGE_IMPORT_DESCRIPTOR)
+                            ImageRvaToVa(pPE, (PVOID)LI.MappedAddress, this->pPE->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress,0);
+	while( ImageRvaToVa(pPE, (PVOID)LI.MappedAddress,idt->Name,0) != 0){
+		PIMAGE_THUNK_DATA pthd =  (PIMAGE_THUNK_DATA)ImageRvaToVa(pPE, (PVOID)LI.MappedAddress,idt->FirstThunk,0);
+		while(pthd->u1.Function){
+			PIMAGE_IMPORT_BY_NAME  pStr = (PIMAGE_IMPORT_BY_NAME) ImageRvaToVa(pPE, (PVOID)LI.MappedAddress,  pthd->u1.AddressOfData,0);
+			//printf("%s %s %x\n", ImageRvaToVa(pPE, (PVOID)LI.MappedAddress,idt->Name,0),(PIMAGE_IMPORT_BY_NAME)pStr->Name,idt->FirstThunk + this->pPE->OptionalHeader.ImageBase);
+			iatEntries[(char *)(PIMAGE_IMPORT_BY_NAME)pStr->Name] = (void *)(idt->FirstThunk + this->pPE->OptionalHeader.ImageBase);
+			pthd++;
+		}
+		idt++;
+	}
+}
+
+// takes all dummy references in the newly generated code and substitutes them with actuall pointers to appropriate iat entries
+int RelocRepair::RepairGeneratedCode(std::map<string, void *,comparer> iatEntries, std::map<string, void *,comparer> relocEntries){
+	// find dyninst section
+	PIMAGE_SECTION_HEADER		pSHc;
+	pSHc					=	&this->pSH[this->pPE->FileHeader.NumberOfSections-1];
+	printf("section name %s %x %d \n",pSHc->Name,pSHc->VirtualAddress,pSHc->SizeOfRawData);
+	void *dynInstStart		=	ImageRvaToVa(pPE, (PVOID)LI.MappedAddress, pSHc->VirtualAddress, 0);
+	std::vector<void *> points;
+
+	// iterate over  each reloc entries in newly generated code
+	for(std::map<string, void *,comparer>::iterator rit = relocEntries.begin(); rit != relocEntries.end(); ++rit){
+		//printf("%s dummy @ %x\n", rit->first.c_str(),rit->second);
+		// find where it is supposed to be referenced in the actuall executable code
+		findAbsoluteAddr(dynInstStart,pSHc->SizeOfRawData,(unsigned long)rit->second,points);
+		// then , replace the dummy address in those instructions with actual pointers into appropriate import
+		for(std::vector<void *>::iterator it = points.begin(); it != points.end(); it++){
+			//printf("\tTo patch at %x to %x\n", *it,iatEntries[rit->first]);
+			//match by symbol name
+			if(iatEntries[rit->first]){
+				memcpy(*it,&iatEntries[rit->first],sizeof(unsigned long));
+				// add it to reloc list so reloc entry gets added for new code too
+				RelocsList.push_back( (unsigned long)*it- (unsigned long)LI.MappedAddress);
+			}
+		}
+		points.clear();
+	}
+
 	return STATUS_OK;
 }
 
@@ -221,28 +282,4 @@ int		RelocRepair::WriteRelocs(void)
 
 
 	return STATUS_OK;
-}
-
-
-
-void RepairMyRelocs(char *file)
-{
-	RelocRepair RR;
-
-	RR.OpenFileAndMap(file);
-	RR.ReadOriginalRelocs();
-	
-
-	// ----------------------------
-	// add reloc entry manually
-	// ---------------------------
-	RR.RelocsList.push_back(0x060B3);
-	
-	RR.GenerateNewRelocs(&RR.RelocsList);
-	RR.WriteRelocs();
-
-
-	
-
-
 }

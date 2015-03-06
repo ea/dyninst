@@ -1,15 +1,14 @@
-
 #ifndef _RELOC_REPAIR_H
 #define _RELOC_REPAIR_H
 
 #include <vector>
 #include <algorithm>
 #include <functional>
-
 #include <Windows.h>
-#include <imagehlp.h>
 #include <assert.h>
+#include <map>
 
+using namespace std;
 
 class RelocRepair
 {
@@ -30,12 +29,20 @@ class RelocRepair
 	public:
 		RelocRepair();
 		~RelocRepair();
-
+		struct comparer
+		{
+		    public:
+		    bool operator()(const std::string x, const std::string y)
+		    {
+		         return x.compare(y)<0;
+		    }
+		};
 
 		int		OpenFileAndMap(char *file);
 		int		CloseFileMap(void);
 		int		ReadOriginalRelocs(void);
-
+		int		RepairGeneratedCode(std::map<string, void *,comparer> iatEntries, std::map<string, void *,comparer> relocEntries);
+				void    parseIAT(std::map<string,void*,comparer> &iatEntries);
 		int		GenerateNewRelocs(type_RelocsList	 *NewRelocs);
 		int		WriteRelocs(void);
 
@@ -50,12 +57,13 @@ class RelocRepair
 	private:
 		PIMAGE_DOS_HEADER			pMZ;
 		PIMAGE_NT_HEADERS			pPE;
-		PIMAGE_SECTION_HEADER		pSH;
+		PIMAGE_SECTION_HEADER		pSH;;
 		LOADED_IMAGE				LI;
 		DWORD						imagebase;
 
 		char						out_file[MAX_PATH];
 
 };
+
 
 #endif
