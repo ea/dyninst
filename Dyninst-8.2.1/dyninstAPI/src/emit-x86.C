@@ -2895,14 +2895,21 @@ bool EmitterIA32Stat::emitCallInstruction(codeGen &gen, func_instance *callee, R
 }
 
 bool EmitterIA32Stat::emitPLTCall(func_instance *callee, codeGen &gen) {
-   // create or retrieve jump slot
-   Address dest = getInterModuleFuncAddr(callee, gen);
-   // load register with address from jump slot
-   emitMovPCRMToReg(RealRegister(REGNUM_EAX), dest-gen.currAddr(), gen);
-   // emit call *(e_x)
-   emitOpRegReg(CALL_RM_OPC1, RealRegister(CALL_RM_OPC2), 
-                RealRegister(REGNUM_EAX), gen);
-   return true;
+    //instead of doing a pc relative call 
+    // we now do an absolute call to iat entry 
+    // which gets fixed later
+
+    // create or retrieve jump slot
+    Address dest = getInterModuleFuncAddr(callee, gen);
+
+
+    GET_PTR(insn, gen);
+    *insn++ = static_cast<unsigned char>(0xFF);
+    *insn++ = static_cast<unsigned char>(0x15);
+    *((Address *)insn) = dest;
+    insn += sizeof(Address);
+    SET_PTR(insn, gen);
+    return true;
 }
 
 bool EmitterIA32Stat::emitPLTJump(func_instance *callee, codeGen &gen) {
@@ -2919,7 +2926,7 @@ bool EmitterIA32Stat::emitPLTJump(func_instance *callee, codeGen &gen) {
 void EmitterIA32::emitLoadShared(opCode op, Register dest, const image_variable *var, bool is_local, int /*size*/, codeGen &gen, Address offset)
 {
    RealRegister dest_r = gen.rs()->loadVirtualForWrite(dest, gen);
-
+   // again, do absolute mov from iat entry
    // create or retrieve jump slot
    Address addr;
    if(var == NULL) {
@@ -2932,7 +2939,7 @@ void EmitterIA32::emitLoadShared(opCode op, Register dest, const image_variable 
       addr = (Address)var->getOffset();
    }
   
-   emitMovPCRMToReg(dest_r, addr - gen.currAddr(), gen, (!is_local && var != NULL));
+   emitMovMToReg(dest_r,addr,gen);
    if (op == loadOp) {
       emitLoadIndir(dest, dest, 4, gen);
    }
@@ -2952,7 +2959,7 @@ void EmitterIA32::emitStoreShared(Register source, const image_variable *var, bo
    // temporary virtual register for storing destination address
    Register dest = gen.rs()->allocateRegister(gen, false);
    RealRegister dest_r = gen.rs()->loadVirtualForWrite(dest, gen);
-   emitMovPCRMToReg(dest_r, addr-gen.currAddr(), gen, !is_local);
+   emitMovMToReg(dest_r, addr-gen.currAddr(), gen);
    emitStoreIndir(dest, source, 4, gen);
    gen.rs()->freeRegister(dest);
 }
