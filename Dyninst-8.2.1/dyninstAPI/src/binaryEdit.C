@@ -39,7 +39,7 @@
 #include "instPoint.h"
 #include "function.h"
 #include "RelocRepair.h"
- 
+
 using namespace Dyninst::SymtabAPI;
 
 // #define USE_ADDRESS_MAPS
@@ -742,6 +742,22 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
       for(std::list<Address>::iterator it = relocs.begin(); it != relocs.end();++it){
         RR.RelocsList.push_back((*it));
       }
+      // ----------------------------
+      // now fix newly generated code
+      // ----------------------------
+      std::map<string, void *,RelocRepair::comparer> iatEntries;
+      RR.parseIAT(iatEntries);
+     
+      std::map< string, void *,RelocRepair::comparer> relocEntries;
+
+      for(std::vector<depRelocation*>::iterator depRelIter = dependentRelocations.begin(); depRelIter != dependentRelocations.end(); ++depRelIter){
+        Address to = (*depRelIter)->getAddress();
+        Symbol *referring = (*depRelIter)->getReferring();
+        relocEntries[referring->getMangledName()] = (void *)to;
+      }
+
+      RR.RepairGeneratedCode(iatEntries,relocEntries);
+
       RR.GenerateNewRelocs(&RR.RelocsList);
       RR.WriteRelocs();      
 
