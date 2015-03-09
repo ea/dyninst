@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 2.6.4)
 project (Dyninst)
-
+set(BOOST_ROOT C:/boost/boost_1_53_0) 
+set(BOOST_LIBRARYDIR C:/boost/boost_1_53_0/lib32-msvc-10.0)
 set (DYNINST_ROOT ${PROJECT_SOURCE_DIR})
 set (CMAKE_SKIP_BUILD_RPATH FALSE)
 set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)

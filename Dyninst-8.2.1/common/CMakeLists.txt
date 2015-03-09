@@ -114,7 +114,7 @@ target_link_private_libraries (common ${IBERTY_LIBRARIES})
 endif()
 
 if(PLATFORM MATCHES nt OR PLATFORM MATCHES windows)
-  target_link_libraries (common Psapi WS2_32 dbghelp)
+  target_link_libraries (common Psapi WS2_32 dbghelp imagehlp)
 endif()
 
 INSTALL (TARGETS common common_static
