@@ -705,12 +705,10 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
           switch(type)          {
             case IMAGE_REL_BASED_ABSOLUTE:
             break;
-            case IMAGE_REL_BASED_HIGHLOW:            {
-              origRelocs.clear();
-              if(newRelocAddress(addr,origRelocs)){
-                for(std::list<Address>::iterator it = origRelocs.begin(); it != origRelocs.end();++it){
-                  cout << "original reloc: " << hex << addr << " new reloc: " << (*it) << endl;
-                }
+            case IMAGE_REL_BASED_HIGHLOW:  {
+              std::list<Address> tempRelocs;
+              if(newRelocAddress(addr,tempRelocs)){
+                origRelocs.insert(origRelocs.begin(),tempRelocs.begin(),tempRelocs.end());
               }
             }
             break;
