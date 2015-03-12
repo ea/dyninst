@@ -58,15 +58,16 @@ void findAbsoluteAddr(void *haystack, unsigned long haystack_len, unsigned long 
 //make a list of entries in final iat
 void RelocRepair::parseIAT(std::map<string,void*,comparer> &iatEntries){
 	PIMAGE_SECTION_HEADER		pSHc = &this->pSH[this->pPE->FileHeader.NumberOfSections-1];
-
+		char lastError[300];
 	PIMAGE_IMPORT_DESCRIPTOR idt = (PIMAGE_IMPORT_DESCRIPTOR)
                             ImageRvaToVa(pPE, (PVOID)LI.MappedAddress, this->pPE->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress,0);
 	while( ImageRvaToVa(pPE, (PVOID)LI.MappedAddress,idt->Name,0) != 0){
 		PIMAGE_THUNK_DATA pthd =  (PIMAGE_THUNK_DATA)ImageRvaToVa(pPE, (PVOID)LI.MappedAddress,idt->FirstThunk,0);
 		while(pthd->u1.Function){
 			PIMAGE_IMPORT_BY_NAME  pStr = (PIMAGE_IMPORT_BY_NAME) ImageRvaToVa(pPE, (PVOID)LI.MappedAddress,  pthd->u1.AddressOfData,0);
-			//printf("%s %s %x\n", ImageRvaToVa(pPE, (PVOID)LI.MappedAddress,idt->Name,0),(PIMAGE_IMPORT_BY_NAME)pStr->Name,idt->FirstThunk + this->pPE->OptionalHeader.ImageBase);
-			iatEntries[(char *)(PIMAGE_IMPORT_BY_NAME)pStr->Name] = (void *)(idt->FirstThunk + this->pPE->OptionalHeader.ImageBase);
+			if(pStr){
+				iatEntries[(char *)(PIMAGE_IMPORT_BY_NAME)pStr->Name] = (void *)(idt->FirstThunk + this->pPE->OptionalHeader.ImageBase);
+			}
 			pthd++;
 		}
 		idt++;
@@ -239,7 +240,7 @@ int		RelocRepair::WriteRelocs(void)
 
 
 	pSHc					=	&this->pSH[this->pPE->FileHeader.NumberOfSections-1];
-	raw_sec_size			=	this->computed_relocs_align_size + pSHc->SizeOfRawData;
+	raw_sec_size			=	this->computed_relocs_size + pSHc->SizeOfRawData;
 	raw_sec_size			=	align(raw_sec_size, this->pPE->OptionalHeader.FileAlignment);
 	raw_offset				=	pSHc->PointerToRawData + pSHc->SizeOfRawData;
 
