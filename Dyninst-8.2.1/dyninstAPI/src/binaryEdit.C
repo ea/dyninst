@@ -681,7 +681,7 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
       // First, text
       assert(symObj);
       
-      std::list<Address> relocs;
+      std::list<Address> origRelocs;
       Region *reloc = NULL;
 
       ////////////////////
@@ -705,7 +705,7 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
           switch(type)          {
             case IMAGE_REL_BASED_ABSOLUTE:
             break;
-            case IMAGE_REL_BASED_HIGHLOW:            {
+            case IMAGE_REL_BASED_HIGHLOW:  {
               std::list<Address> tempRelocs;
               if(newRelocAddress(addr,tempRelocs)){
                 origRelocs.insert(origRelocs.begin(),tempRelocs.begin(),tempRelocs.end());
@@ -737,7 +737,7 @@ bool BinaryEdit::writeFile(const std::string &newFileName)
       // ----------------------------
       // add reloc entry manually
       // ---------------------------
-      for(std::list<Address>::iterator it = relocs.begin(); it != relocs.end();++it){
+      for(std::list<Address>::iterator it = origRelocs.begin(); it != origRelocs.end();++it){
         RR.RelocsList.push_back((*it));
       }
       // ----------------------------

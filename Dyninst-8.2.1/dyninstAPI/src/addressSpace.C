@@ -1906,7 +1906,7 @@ bool AddressSpace::transform(CodeMover::Ptr cm) {
 
 bool AddressSpace::newRelocAddress(Address address,std::list<Address> &relocs){
   //findBlocksByAddr
-  std::list<Address> relocs;
+
   std::set<block_instance *> blocks;
 
    std::set<func_instance*> funcs;

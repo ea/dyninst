@@ -91,6 +91,7 @@ set (SRC_LIST
      src/Patching.C
      src/frameChecker.C
      src/BPatch_memoryAccessAdapter.C
+	 src/RelocRepair.C
 )
 
 # This is just .. messy. Sorry.
