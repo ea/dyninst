@@ -13,10 +13,10 @@ codeCoverage.exe: codeCoverage.obj
 	link  -out:codeCoverage.exe codeCoverage.obj $(DYNINST_LIB)\dyninstAPI.lib \
 	dbghelp.lib imagehlp.lib
 libInst.obj: libInst.c
-	$(CC) /LD -c libInst.c $(CFLAGS) -I$(DYNINST_INCLUDE) -I$(BOOST_ROOT)  
+	$(CC)  -c libInst.c  -I$(DYNINST_INCLUDE) -I$(BOOST_ROOT)  
 
 libInst.dll:libInst.obj
-	link -dll -out:libInst.dll libInst.obj 
+	link -dll -out:libInst.dll libInst.obj user32.lib
 	
 	
 codeCoverage.obj: codeCoverage.cpp

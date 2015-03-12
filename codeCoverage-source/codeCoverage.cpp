@@ -89,101 +89,6 @@ bool insertFuncEntry (BPatch_binaryEdit * appBin, BPatch_function * curFunc,
 
 }
 
-// -----------------------------------------------------------------------------------------------------------------
-int FixImports(char *file)
-{
-	PIMAGE_DOS_HEADER			pMZ;
-	PIMAGE_NT_HEADERS			pPE;
-	PIMAGE_SECTION_HEADER		pSH;
-	LOADED_IMAGE				LI;
-	DWORD						imagebase;
-
-	PIMAGE_IMPORT_DESCRIPTOR		pIMP;
-	PIMAGE_THUNK_DATA				thunk;
-	PIMAGE_IMPORT_BY_NAME			iname;
-	DWORD							rva, ImportRVA, first;
-	int								impd_num;
-	char							*name;
-
-
-	if (!MapAndLoad(file, NULL, &LI, FALSE, FALSE))
-	{
-		printf("! Error: Unable to load file, error = %d\n",GetLastError());
-		return 0;
-	}
-
-
-		
-	pMZ			=	(PIMAGE_DOS_HEADER)LI.MappedAddress;
-	pPE			=	(PIMAGE_NT_HEADERS)LI.FileHeader;
-	pSH			=	(PIMAGE_SECTION_HEADER)((DWORD)LI.FileHeader +  sizeof(IMAGE_NT_HEADERS));
-
-
-	ImportRVA	=		pPE->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-	pSH			+=		pPE->FileHeader.NumberOfSections - 1;
-	imagebase	=		pPE->OptionalHeader.ImageBase;
-
-
-	// hack
-	rva			=	pSH->VirtualAddress + (ImportRVA & 0xFFFF);
-
-
-	pIMP		= (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pPE,(PVOID)LI.MappedAddress, rva, 0);
-	first		= (pIMP->OriginalFirstThunk == 0 ? pIMP->FirstThunk:pIMP->OriginalFirstThunk);
-
-
-	impd_num				=	0;
-	DWORD		bad_rva		=	ImportRVA & ~0xFFFF;
-
-#define fix_field(xfield) { if (xfield >= bad_rva) { xfield = pSH->VirtualAddress + (xfield & 0xFFFF);  } }
-
-	while ((pIMP->OriginalFirstThunk != 0) || (pIMP->FirstThunk != 0))
-	{
-	
-		fix_field(pIMP->FirstThunk);
-		fix_field(pIMP->OriginalFirstThunk);
-		fix_field(pIMP->Name);
-
-		name	=	(char*)ImageRvaToVa(pPE,(PVOID)LI.MappedAddress, pIMP->Name, 0);
-		first	=	(pIMP->OriginalFirstThunk == 0 ? pIMP->FirstThunk : pIMP->OriginalFirstThunk);
-		thunk	=	(PIMAGE_THUNK_DATA)ImageRvaToVa(pPE,(PVOID)LI.MappedAddress, first, 0);
-
-		fix_field(thunk->u1.Function);
-
-		int b		=	0;
-		while ((DWORD)thunk->u1.Function != 0)
-		{
-			DWORD	api_addr	=	(DWORD)(pIMP->FirstThunk + b + imagebase);
-			if (((DWORD)thunk->u1.Function & IMAGE_ORDINAL_FLAG32) == IMAGE_ORDINAL_FLAG32)
-			{
-				/* import by ordinal */
-				printf("    + [0x%.08x] -> %s!ORD%x\n", api_addr ,name, (WORD)thunk->u1.Ordinal);
-				
-			}
-			else
-			{
-				/* import by name */
-				iname = (PIMAGE_IMPORT_BY_NAME)ImageRvaToVa(pPE, (PVOID)LI.MappedAddress, thunk->u1.ForwarderString,0);
-				printf("    + [0x%.08x] -> %s!%s\n", api_addr, name, iname->Name);
-
-				
-			}
-			b += sizeof(DWORD);
-			thunk++;
-		}
-		pIMP++;
-		impd_num++;
-	}
-
-
-	fix_field(pPE->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
-
-	if (LI.MappedAddress)
-		UnMapAndLoad(&LI);
-
-	return 1;
-}
-// -----------------------------------------------------------------------------------------------------------------
 
 
 int main (int argc, char *argv[])
@@ -197,7 +102,7 @@ int main (int argc, char *argv[])
      * as well as the binary are opened */
 	inBinary = argv[1];
 	outBinary = argv[2];
-    BPatch_binaryEdit *appBin = bpatch.openBinary (inBinary, true);
+    BPatch_binaryEdit *appBin = bpatch.openBinary (inBinary, false);
     if (appBin == NULL) {
         cerr << "Failed to open binary" << endl;
         return EXIT_FAILURE;
@@ -269,9 +174,14 @@ int main (int argc, char *argv[])
             curFunc->getName (funcName, 1024);
 						cout << funcName << endl;
 
-			if(strcmp(funcName,"main")==0)
-            insertFuncEntry (appBin, curFunc, funcName, instIncFunc, funcIndex);
-        }
+			  // if(funcIndex < 1000) {
+			  // cout << "Dumb function " << funcName << endl;
+			  // funcIndex++;
+			  // continue;
+              // }
+			insertFuncEntry (appBin, curFunc, funcName, instIncFunc, funcIndex);
+			funcIndex++;
+		}
     }
     
 	cout << "writting the binary!" << endl;
@@ -280,7 +190,6 @@ int main (int argc, char *argv[])
         return EXIT_FAILURE;
     }
 	
-	//FixImports(outBinary);
 	cout << "wrote the binary!" << endl;
 
     return EXIT_SUCCESS;
