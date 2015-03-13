@@ -152,6 +152,11 @@ namespace hd {
             (const unsigned char*)(cr->getPtrToInstruction(addr));
         if(!bufferBegin)
             return false;
+		if(bufferBegin[0] == 0x8b && bufferBegin[1] == 0xff){
+			//this is a mov edi, edi, a place for hot patching, 
+			// definitive sign that this is a function start
+			return true;
+		}
         if (!isStackFramePrecheck_msvs(bufferBegin))
             return false;
     
