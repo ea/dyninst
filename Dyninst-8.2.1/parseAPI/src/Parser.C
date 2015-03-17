@@ -1322,8 +1322,30 @@ Parser::parse_frame(ParseFrame & frame, bool recursive) {
                     }
                 }
             } else {
-                // default
-            }
+				cerr << "Well , here we are " << ah.getInstruction()->format() << endl;
+				std::vector<Operand> operands;
+				ah.getInstruction()->getOperands(operands);
+				cerr << operands.size() << endl;
+				if(operands.size() > 1){ cerr << hex <<operands[1].getValue()->eval().val.u32val << endl;		
+					Address addr = operands[1].getValue()->eval().val.u32val;
+					if(cur->region()->isValidAddress(addr & 0x0000ffff)) {
+						cerr << "yep, it's valid!" << endl;
+						Edge * newedge = NULL;
+						newedge = link_tempsink(cur,DIRECT);
+						ParseWorkBundle *bundle = new ParseWorkBundle();
+						frame.work_bundles.push_back(bundle);
+						ParseWorkElem * we = bundle->add(
+											new ParseWorkElem(
+												bundle,
+												newedge,
+												addr & 0x0000ffff,
+												true,
+												false
+											));
+						frame.pushWork(we);
+					}
+				}
+		    }
 
             /** Check for overruns of valid address space **/
             if (!is_code(func,ah.getNextAddr())) {
